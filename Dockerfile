@@ -1,15 +1,27 @@
-FROM gradle:4.7.0-jdk8-alpine AS build
-COPY --chown=gradle:gradle . /home/gradle/src
-WORKDIR /home/gradle/src
-RUN gradle build --no-daemon 
+# Этап 1: Сборка приложения
+FROM golang:1.22 AS builder
 
-FROM openjdk:8-jre-slim
+# Установка рабочей директории
+WORKDIR /app
 
+# Копируем go.mod и go.sum и загружаем зависимости
+COPY backend/go.mod backend/go.sum ./
+RUN go mod download
+
+# Копируем все файлы приложения
+COPY backend .
+
+# Собираем приложение
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o myapp .
+
+# Этап 2: Создание финального образа
+FROM alpine:latest
+
+# Копируем собранное приложение из этапа сборки
+COPY --from=builder /app/myapp /usr/local/bin/myapp
+
+# Указываем команду для запуска приложения
+CMD ["myapp"]
+
+# Открываем порт, если необходимо
 EXPOSE 8080
-
-RUN mkdir /app
-
-COPY --from=build /home/gradle/src/build/libs/*.jar /app/spring-boot-application.jar
-
-ENTRYPOINT ["java", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseCGroupMemoryLimitForHeap", "-Djava.security.egd=file:/dev/./urandom","-jar","/app/spring-boot-application.jar"]
-
