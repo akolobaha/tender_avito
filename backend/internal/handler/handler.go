@@ -3,10 +3,12 @@ package handler
 import (
 	"fmt"
 	"github.com/gorilla/mux"
+	"log/slog"
 	"net/http"
+	"tenders/internal/config"
 )
 
-func NewRouter() {
+func NewRouter(cfg *config.Config) {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/api/ping", ping).Methods("GET")
@@ -25,8 +27,8 @@ func NewRouter() {
 	r.HandleFunc("/api/bids/{bidId}/edit", bidUpdate).Methods("PATCH")
 	r.HandleFunc("api/bids/{bidId}/rollback/{version}", bidRollback).Methods("PUT")
 
-	//slog.Info("Starting server on " + cfg.ServerAddress)
-	err := http.ListenAndServe(":8080", r)
+	slog.Info("Starting server on " + cfg.ServerAddress)
+	err := http.ListenAndServe(cfg.ServerAddress, r)
 	if err != nil {
 		fmt.Println("Error starting server:", err)
 	}

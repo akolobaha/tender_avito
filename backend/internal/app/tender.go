@@ -1,13 +1,14 @@
 package app
 
 import (
+	"tenders/internal/config"
 	"tenders/internal/handler"
 )
 
-func Run() {
+func Run(cfg *config.Config) {
 
 	//ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
-	handler.NewRouter()
+	handler.NewRouter(cfg)
 
 }

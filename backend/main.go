@@ -1,15 +1,22 @@
 package main
 
 import (
+	"fmt"
+	"log/slog"
 	"tenders/internal/app"
+	"tenders/internal/config"
 )
 
-func main() {
-	//cfg, err := config.Parse("../.env")
-	//if err != nil {
-	//	fmt.Println(err)
-	//	return
-	//}
+const envFilePath = "/usr/local/.env"
 
-	app.Run()
+func main() {
+	cfg, err := config.Parse(envFilePath)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	slog.Info("Server is starting")
+
+	app.Run(cfg)
 }
