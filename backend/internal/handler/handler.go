@@ -8,7 +8,6 @@ import (
 
 func NewRouter() {
 	r := mux.NewRouter()
-	r.HandleFunc("/", goodbyeHandler).Methods("GET")
 
 	r.HandleFunc("/api/ping", ping).Methods("GET")
 
@@ -26,7 +25,7 @@ func NewRouter() {
 	r.HandleFunc("/api/bids/{bidId}/edit", bidUpdate).Methods("PATCH")
 	r.HandleFunc("api/bids/{bidId}/rollback/{version}", bidRollback).Methods("PUT")
 
-	fmt.Println("Starting server on :8080...")
+	//slog.Info("Starting server on " + cfg.ServerAddress)
 	err := http.ListenAndServe(":8080", r)
 	if err != nil {
 		fmt.Println("Error starting server:", err)
