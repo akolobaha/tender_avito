@@ -1,0 +1,45 @@
+
+version: '3.8'
+
+networks:
+  tender-network:
+    driver: bridge
+
+
+services:
+  db:
+    image: postgres:latest
+    container_name: tender-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DATABASE}
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - 5432:5432
+    volumes:
+        - ./backend/db/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - tender-network
+
+  app:
+    image: my-go-app
+    volumes:
+      - .:/home
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tender-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    links:
+      - db
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DATABASE}
+    networks:
+      - tender-network

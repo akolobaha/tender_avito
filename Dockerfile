@@ -8,6 +8,8 @@ WORKDIR /app
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 
+COPY .env .
+
 # Копируем все файлы приложения
 COPY backend .
 
@@ -18,10 +20,11 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o myapp .
 FROM alpine:latest
 
 # Копируем собранное приложение из этапа сборки
-COPY --from=builder /app/myapp /usr/local/bin/myapp
+COPY --from=builder /app/myapp /usr/local/bin/tenderapp
+COPY --from=builder /app/.env /usr/local/.env
 
 # Указываем команду для запуска приложения
-CMD ["myapp"]
+CMD ["tenderapp"]
 
 # Открываем порт, если необходимо
 EXPOSE 8080
