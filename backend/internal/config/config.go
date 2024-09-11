@@ -32,7 +32,7 @@ func Parse(s string) (*Config, error) {
 
 func InitDbConnectionString(c *Config) {
 	ConnString = fmt.Sprintf(
-		"user=%s password=%s dbname=%s host=db port=%s sslmode=disable",
-		c.PostgresUsername, c.PostgresPassword, c.PostgresDatabase, c.PostgresPort,
+		"user=%s password=%s dbname=%s host=%s port=%s sslmode=require",
+		c.PostgresUsername, c.PostgresPassword, c.PostgresDatabase, c.PostgresHost, c.PostgresPort,
 	)
 }

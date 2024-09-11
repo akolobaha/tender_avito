@@ -17,7 +17,7 @@ func tendersList(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 
 	// Выполнение запроса
-	rows, err := db.Query("SELECT id, description, organization_id, employee_id, version_uid, status FROM tender")
+	rows, err := db.Query("SELECT id, description, organization_id, employee_id, version, status FROM tender")
 	if err != nil {
 		log.Fatal(err)
 	}
