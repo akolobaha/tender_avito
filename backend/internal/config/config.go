@@ -1,6 +1,9 @@
 package config
 
-import "github.com/ilyakaznacheev/cleanenv"
+import (
+	"fmt"
+	"github.com/ilyakaznacheev/cleanenv"
+)
 
 type Config struct {
 	ServerAddress    string `env:"SERVER_ADDRESS"`
@@ -13,11 +16,23 @@ type Config struct {
 	PostgresDatabase string `env:"POSTGRES_DATABASE"`
 }
 
+var Cfg *Config
+
+var ConnString string
+
 func Parse(s string) (*Config, error) {
 	c := &Config{}
 	if err := cleanenv.ReadConfig(s, c); err != nil {
 		return nil, err
 	}
 
+	Cfg = c
 	return c, nil
+}
+
+func InitDbConnectionString(c *Config) {
+	ConnString = fmt.Sprintf(
+		"user=%s password=%s dbname=%s host=db port=%s sslmode=disable",
+		c.PostgresUsername, c.PostgresPassword, c.PostgresDatabase, c.PostgresPort,
+	)
 }

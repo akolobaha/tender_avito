@@ -1,6 +1,11 @@
 
 version: '3.8'
 
+networks:
+  tender-network:
+    driver: bridge
+
+
 services:
   db:
     image: postgres:latest
@@ -10,9 +15,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USERNAME}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - ${POSTGRES_PORT}:5432
+      - 5432:5432
     volumes:
         - ./backend/db/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - tender-network
 
   app:
     image: my-go-app
@@ -34,3 +41,5 @@ services:
       POSTGRES_USER: ${POSTGRES_USERNAME}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DATABASE}
+    networks:
+      - tender-network
