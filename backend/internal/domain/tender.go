@@ -5,10 +5,10 @@ import (
 )
 
 type TenderResp struct {
-	ID             int    `json:"id"`
+	ID             string `json:"id"`
 	Description    string `json:"description"`
 	OrganizationId string `json:"organization_id"`
 	EmployeeId     string `json:"employee_id"`
-	Version        string `json:"version_uid"`
+	Version        string `json:"version"`
 	Status         string `json:"status"`
 }
