@@ -7,6 +7,7 @@ import (
 	_ "github.com/lib/pq"
 	"log"
 	"net/http"
+	"strings"
 	"tenders/db"
 	"tenders/internal/domain"
 )
@@ -53,7 +54,35 @@ func tendersList(w http.ResponseWriter, r *http.Request) {
 }
 
 func tenderCreate(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Tenders create: %s")
+	var newTenderReq domain.TenderReq
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&newTenderReq)
+	if err != nil {
+		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
+		return
+	}
+	db := db.GetConnection()
+	defer db.Close()
+
+	// Получим ответственного (есть ли такой у этой компании)
+	orgResponsible := domain.OrganizationResponsible{}
+
+	db.
+		QueryRow("SELECT id FROM organization_responsible WHERE user_id = (select id from employee where username = $1) and organization_id = $2", newTenderReq.CreatorUserName, newTenderReq.OrganizationId).
+		Scan(&orgResponsible.Id)
+
+	if orgResponsible.Id == "" {
+		http.Error(w, "Ответственного с указнными данными не существует", http.StatusBadRequest)
+		return
+	}
+
+	err = db.QueryRow("INSERT INTO tender (name, description, service_type, status, organization_responsible_id) VALUES ($1, $2, $3, $4, $5) RETURNING id", newTenderReq.Name, newTenderReq.Description, newTenderReq.ServiceType, strings.ToUpper(newTenderReq.Status), orgResponsible.Id).Scan(&newTenderReq.Id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	renderJSON(w, newTenderReq)
 }
 
 func tendersByUser(w http.ResponseWriter, r *http.Request) {

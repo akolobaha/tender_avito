@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	"log/slog"
@@ -34,13 +35,14 @@ func NewRouter(cfg *config.Config) {
 	}
 }
 
-// handler function for the root route
 func ping(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "ok")
 }
 
-// handler function for a custom route
-func goodbyeHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "good bye!")
-
+func renderJSON(w http.ResponseWriter, v interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
