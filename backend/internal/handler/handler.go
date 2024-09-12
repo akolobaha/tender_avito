@@ -17,7 +17,7 @@ func NewRouter(cfg *config.Config) {
 	// Тендеры
 	r.HandleFunc("/api/tenders", tendersList).Methods("GET")
 	r.HandleFunc("/api/tenders/new", tenderCreate).Methods("POST")
-	r.HandleFunc("/api/tenders/my", tendersByUser).Methods("GET")
+	r.HandleFunc("/api/tenders/my", tendersMy).Methods("GET")
 	r.HandleFunc("/api/tenders/{tenderId}/edit", tenderUpdate).Methods("PATCH")
 	r.HandleFunc("/api/tenders/{tenderId}/rollback/{version}", tenderRollback).Methods("PUT")
 
