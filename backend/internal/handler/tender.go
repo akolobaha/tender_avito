@@ -14,13 +14,32 @@ import (
 	"tenders/internal/domain"
 )
 
-func tendersList(w http.ResponseWriter, r *http.Request) {
-	// Настройки подключения к базе данных
+func tendersListHandler(w http.ResponseWriter, r *http.Request) {
 	db := db.GetConnection()
 	defer db.Close()
 
-	// Выполнение запроса
-	rows, err := db.Query("SELECT id, description, organization_id, employee_id, version, status FROM tender")
+	limit, offset := parseOffsetParams(r)
+	serviceTypes := r.URL.Query()["service_type"]
+
+	// Начинаем с базового запроса
+	query := "SELECT id, name, description, status, service_type FROM tender"
+	var args []interface{}
+
+	if len(serviceTypes) > 0 {
+		placeholders := make([]string, len(serviceTypes))
+		for i := range serviceTypes {
+			placeholders[i] = fmt.Sprintf("$%d", i+1) // Используем $ для плейсхолдеров
+			args = append(args, serviceTypes[i])      // Добавление значений в аргументы
+		}
+		query += " WHERE service_type IN (" + strings.Join(placeholders, ",") + ")"
+	}
+
+	// Добавляем LIMIT и OFFSET
+	query += " LIMIT $" + fmt.Sprintf("%d", len(args)+1) + " OFFSET $" + fmt.Sprintf("%d", len(args)+2)
+	args = append(args, limit, offset)
+
+	// Выполнение запроса с подстановкой параметров
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -32,7 +51,7 @@ func tendersList(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var tender domain.TenderResp
 
-		err = rows.Scan(&tender.ID, &tender.Description, &tender.OrganizationId, &tender.EmployeeId, &tender.Version, &tender.Status)
+		err = rows.Scan(&tender.ID, &tender.Name, &tender.Description, &tender.Status, &tender.ServiceType)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -46,16 +65,10 @@ func tendersList(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	// Установка заголовка Content-Type
-	w.Header().Set("Content-Type", "application/json")
-	// Сериализация данных в JSON и запись в ResponseWriter
-	if err := json.NewEncoder(w).Encode(tenders); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	renderJSON(w, tenders)
 }
 
-func tenderCreate(w http.ResponseWriter, r *http.Request) {
+func tenderCreateHandler(w http.ResponseWriter, r *http.Request) {
 	var newTenderReq domain.Tender
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&newTenderReq)
@@ -91,7 +104,7 @@ func tenderCreate(w http.ResponseWriter, r *http.Request) {
 	renderJSON(w, newTenderResp)
 }
 
-func tendersMy(w http.ResponseWriter, r *http.Request) {
+func tendersMyHandler(w http.ResponseWriter, r *http.Request) {
 	username := r.URL.Query().Get("username")
 	if username == "" {
 		http.Error(w, "username is required", http.StatusBadRequest)
@@ -123,7 +136,7 @@ func tendersMy(w http.ResponseWriter, r *http.Request) {
 	renderJSON(w, tenders)
 }
 
-func tenderUpdate(w http.ResponseWriter, r *http.Request) {
+func tenderUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	tenderID := vars["tenderId"]
 
