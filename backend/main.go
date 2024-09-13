@@ -7,9 +7,9 @@ import (
 	"tenders/internal/config"
 )
 
-//const envFilePath = "/usr/local/.env"
+const envFilePath = "/usr/local/.env"
 
-const envFilePath = "../.env"
+//const envFilePath = "../.env"
 
 func main() {
 	cfg, err := config.Parse(envFilePath)
