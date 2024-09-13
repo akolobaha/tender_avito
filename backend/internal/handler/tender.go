@@ -193,7 +193,7 @@ func tenderUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = domain.IsUserResponsibleToTender(username, tenderIdUuid, w)
+	err = domain.IsUserResponsibleToTenderByUsername(username, tenderIdUuid)
 	if err != nil {
 		http.Error(w, "Не достаточно прав", http.StatusForbidden)
 		return

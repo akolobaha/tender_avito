@@ -15,7 +15,7 @@ func getBidsByTenderIdHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func bidCreateHandler(w http.ResponseWriter, r *http.Request) {
-	var newBidReq domain.Bid
+	var newBidReq domain.BidReq
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&newBidReq)
 	if err != nil {
@@ -25,9 +25,10 @@ func bidCreateHandler(w http.ResponseWriter, r *http.Request) {
 	db := db.GetConnection()
 	defer db.Close()
 
-	orgResponsible, err := domain.GetOrganizationResponsible(newBidReq.OrganisationId, newBidReq.CreatorUsername)
+	var orgResponsible domain.OrganizationResponsible
+	orgResponsible, err = domain.GetOrganizationResponsible(newBidReq.TenderId, newBidReq.AuthorId)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusForbidden)
 		return
 	}
 

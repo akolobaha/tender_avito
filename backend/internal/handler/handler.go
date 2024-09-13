@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -45,25 +44,18 @@ func NewRouter(cfg *config.Config) {
 				// Ждем несколько секунд перед перезапуском
 				time.Sleep(5 * time.Second)
 				slog.Info("Error starting server:", err)
-
 			}
 
 			slog.Info("Error starting server:", err)
 		}
 	}()
 
-	// Обработка сигналов завершения (например, Ctrl+C)
+	// Обработка сигналов завершения
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
 
-	log.Println("Shutting down server...")
-
-	//slog.Info("Starting server on " + cfg.ServerAddress)
-	//err := http.ListenAndServe(cfg.ServerAddress, r)
-	//if err != nil {
-	//	fmt.Println("Error starting server:", err)
-	//}
+	slog.Info("Shutting down server...")
 }
 
 func ping(w http.ResponseWriter, r *http.Request) {
