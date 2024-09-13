@@ -2,11 +2,20 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
+	"log"
 	"log/slog"
 	"net/http"
+	"os"
+	"os/signal"
+	"strconv"
+	"strings"
+	"syscall"
 	"tenders/internal/config"
+	"tenders/internal/domain"
+	"time"
 )
 
 func NewRouter(cfg *config.Config) {
@@ -28,11 +37,33 @@ func NewRouter(cfg *config.Config) {
 	r.HandleFunc("/api/bids/{bidId}/edit", BidsEditHandler).Methods("PATCH")
 	r.HandleFunc("api/bids/{bidId}/rollback/{version}", bidRollback).Methods("PUT")
 
-	slog.Info("Starting server on " + cfg.ServerAddress)
-	err := http.ListenAndServe(cfg.ServerAddress, r)
-	if err != nil {
-		fmt.Println("Error starting server:", err)
-	}
+	go func() {
+		for {
+			err := http.ListenAndServe(cfg.ServerAddress, r)
+			if err != nil {
+				slog.Info("Error starting server:", err)
+				// Ждем несколько секунд перед перезапуском
+				time.Sleep(5 * time.Second)
+				slog.Info("Error starting server:", err)
+
+			}
+
+			slog.Info("Error starting server:", err)
+		}
+	}()
+
+	// Обработка сигналов завершения (например, Ctrl+C)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	<-stop
+
+	log.Println("Shutting down server...")
+
+	//slog.Info("Starting server on " + cfg.ServerAddress)
+	//err := http.ListenAndServe(cfg.ServerAddress, r)
+	//if err != nil {
+	//	fmt.Println("Error starting server:", err)
+	//}
 }
 
 func ping(w http.ResponseWriter, r *http.Request) {
@@ -43,22 +74,56 @@ func renderJSON(w http.ResponseWriter, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(v); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
 	}
 }
 
-func parseOffsetParams(r *http.Request) (string, string) {
-	// Извлечение параметров limit, offset и serviceType из URL
-	limit := r.URL.Query().Get("limit")
-	offset := r.URL.Query().Get("offset")
+func parseOffsetParams(w http.ResponseWriter, r *http.Request) (int, int) {
+	// Получаем параметры offset и limit из запроса
+	offsetStr := r.URL.Query().Get("offset")
+	limitStr := r.URL.Query().Get("limit")
 
-	// Установка значений по умолчанию, если не указаны
-	if limit == "" {
-		limit = "5" // по умолчанию 5
+	// Преобразуем параметры в целые числа
+	offset := 0 // значение по умолчанию
+	limit := 10 // значение по умолчанию
+
+	if offsetStr != "" {
+		var err error
+		offset, err = strconv.Atoi(offsetStr)
+		if err != nil {
+			http.Error(w, "invalid offset", http.StatusBadRequest)
+
+		}
 	}
-	if offset == "" {
-		offset = "0" // По умолчанию 0
+
+	if limitStr != "" {
+		var err error
+		limit, err = strconv.Atoi(limitStr)
+		if err != nil {
+			http.Error(w, "invalid limit", http.StatusBadRequest)
+		}
 	}
 
 	return limit, offset
+}
+
+func capitalizeFirstLetter(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	return strings.ToUpper(string(s[0])) + strings.ToLower(s[1:])
+}
+
+func parseServiceTypeParams(r *http.Request) ([]string, error) {
+	serviceTypes := r.URL.Query()["service_type"]
+	for _, serviceType := range serviceTypes {
+		switch capitalizeFirstLetter(serviceType) {
+		case domain.ServiceTypeConstruction:
+		case domain.ServiceTypeManufacture:
+		case domain.ServiceTypeDelivery:
+		default:
+			return nil, errors.New("invalid service type")
+		}
+	}
+
+	return serviceTypes, nil
 }

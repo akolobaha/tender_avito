@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -18,8 +17,12 @@ func tendersListHandler(w http.ResponseWriter, r *http.Request) {
 	db := db.GetConnection()
 	defer db.Close()
 
-	limit, offset := parseOffsetParams(r)
-	serviceTypes := r.URL.Query()["service_type"]
+	limit, offset := parseOffsetParams(w, r)
+	serviceTypes, err := parseServiceTypeParams(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	// Начинаем с базового запроса
 	query := "SELECT id, name, description, status, service_type FROM tender"
@@ -41,7 +44,8 @@ func tendersListHandler(w http.ResponseWriter, r *http.Request) {
 	// Выполнение запроса с подстановкой параметров
 	rows, err := db.Query(query, args...)
 	if err != nil {
-		log.Fatal(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 	defer rows.Close()
 
@@ -53,7 +57,8 @@ func tendersListHandler(w http.ResponseWriter, r *http.Request) {
 
 		err = rows.Scan(&tender.ID, &tender.Name, &tender.Description, &tender.Status, &tender.ServiceType)
 		if err != nil {
-			log.Fatal(err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 
 		tenders = append(tenders, tender)
@@ -62,7 +67,8 @@ func tendersListHandler(w http.ResponseWriter, r *http.Request) {
 	// Проверка на ошибки после прохода по результатам
 	err = rows.Err()
 	if err != nil {
-		log.Fatal(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	renderJSON(w, tenders)
@@ -90,7 +96,7 @@ func tenderCreateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Ответственного с указнными данными не существует", http.StatusBadRequest)
 		return
 	}
-
+	newTenderReq.Status = domain.TenderStatusCreated
 	err = db.QueryRow("INSERT INTO tender (name, description, service_type, status, organization_responsible_id) VALUES ($1, $2, $3, $4, $5) RETURNING id", newTenderReq.Name, newTenderReq.Description, newTenderReq.ServiceType, strings.ToUpper(newTenderReq.Status), orgResponsible.Id).Scan(&newTenderReq.Id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -111,14 +117,53 @@ func tendersMyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Получаем параметры offset и limit из запроса
+	offsetStr := r.URL.Query().Get("offset")
+	limitStr := r.URL.Query().Get("limit")
+
+	// Преобразуем параметры в целые числа
+	offset := 0 // значение по умолчанию
+	limit := 10 // значение по умолчанию
+
+	if offsetStr != "" {
+		var err error
+		offset, err = strconv.Atoi(offsetStr)
+		if err != nil {
+			http.Error(w, "invalid offset", http.StatusBadRequest)
+			return
+		}
+	}
+
+	if limitStr != "" {
+		var err error
+		limit, err = strconv.Atoi(limitStr)
+		if err != nil {
+			http.Error(w, "invalid limit", http.StatusBadRequest)
+			return
+		}
+	}
+
 	db := db.GetConnection()
 	defer db.Close()
 
 	var tenders []domain.Tender
 
-	rows, err := db.Query("SELECT id, name, service_type, description, status\n\tFROM tender\n\tWHERE organization_responsible_id IN (SELECT id FROM organization_responsible WHERE user_id IN (SELECT id\n\tFROM employee\n\twhere username = $1));", username)
+	// Изменяем SQL-запрос для использования offset и limit
+	query := `
+        SELECT id, name, service_type, description, status
+        FROM tender
+        WHERE organization_responsible_id IN (
+            SELECT id FROM organization_responsible 
+            WHERE user_id IN (
+                SELECT id FROM employee WHERE username = $1
+            )
+        )
+        LIMIT $2 OFFSET $3;`
+
+	rows, err := db.Query(query, username, limit, offset)
 	if err != nil {
-		log.Fatal(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 	defer rows.Close()
 
@@ -127,7 +172,8 @@ func tendersMyHandler(w http.ResponseWriter, r *http.Request) {
 
 		err = rows.Scan(&tender.Id, &tender.Name, &tender.ServiceType, &tender.Description, &tender.Status)
 		if err != nil {
-			log.Fatal(err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 
 		tenders = append(tenders, tender)

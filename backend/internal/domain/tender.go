@@ -5,6 +5,15 @@ import (
 	_ "github.com/lib/pq"
 )
 
+const TenderStatusCreated = "CREATED"
+const TenderStatusPublished = "PUBLISHED"
+const TenderStatusClosed = "CLOSED"
+const TenderStatusOpen = "OPEN"
+
+const ServiceTypeConstruction = "Construction"
+const ServiceTypeDelivery = "Delivery"
+const ServiceTypeManufacture = "Manufacture"
+
 type TenderResp struct {
 	ID             string `json:"id"`
 	Name           string `json:"name"`
