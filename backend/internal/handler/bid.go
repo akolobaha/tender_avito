@@ -9,11 +9,6 @@ import (
 	"tenders/internal/domain"
 )
 
-func getBidsByTenderIdHandler(w http.ResponseWriter, r *http.Request) {
-
-	fmt.Fprintf(w, "bids list: %s")
-}
-
 func bidCreateHandler(w http.ResponseWriter, r *http.Request) {
 	var newBidReq domain.BidReq
 	decoder := json.NewDecoder(r.Body)
@@ -93,12 +88,6 @@ func bidsMyHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func BidsEditHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userID := vars["bidId"]
-	fmt.Fprintf(w, "User ID: %s", userID)
-}
-
-func bidRollback(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["bidId"]
 	fmt.Fprintf(w, "User ID: %s", userID)

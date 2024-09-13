@@ -27,14 +27,11 @@ func NewRouter(cfg *config.Config) {
 	r.HandleFunc("/api/tenders/new", tenderCreateHandler).Methods("POST")
 	r.HandleFunc("/api/tenders/my", tendersMyHandler).Methods("GET")
 	r.HandleFunc("/api/tenders/{tenderId}/edit", tenderUpdateHandler).Methods("PATCH")
-	r.HandleFunc("/api/tenders/{tenderId}/rollback/{version}", tenderRollback).Methods("PUT")
 
 	// Предложения
-	r.HandleFunc("/api/bids/{tenderId}/list", getBidsByTenderIdHandler).Methods("GET")
 	r.HandleFunc("/api/bids/new", bidCreateHandler).Methods("POST")
 	r.HandleFunc("/api/bids/my", bidsMyHandler).Methods("GET")
 	r.HandleFunc("/api/bids/{bidId}/edit", BidsEditHandler).Methods("PATCH")
-	r.HandleFunc("api/bids/{bidId}/rollback/{version}", bidRollback).Methods("PUT")
 
 	go func() {
 		for {

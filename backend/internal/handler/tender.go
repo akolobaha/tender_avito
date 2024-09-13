@@ -253,9 +253,3 @@ func tenderUpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	renderJSON(w, newTenderResp)
 }
-
-func tenderRollback(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userID := vars["tenderId"]
-	fmt.Fprintf(w, "User ID: %s", userID)
-}
