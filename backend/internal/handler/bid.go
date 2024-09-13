@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
-	"log"
 	"net/http"
 	"tenders/db"
 	"tenders/internal/domain"
@@ -55,7 +54,8 @@ func bidsMyHandler(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := db.Query("SELECT id, name, description, status, tender_id\nFROM bid\nWHERE organization_responsible_id IN (SELECT id FROM organization_responsible WHERE user_id IN (SELECT id FROM employee where username = $1));", username)
 	if err != nil {
-		log.Fatal(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	defer rows.Close()
 
@@ -64,7 +64,8 @@ func bidsMyHandler(w http.ResponseWriter, r *http.Request) {
 
 		err = rows.Scan(&bid.Id, &bid.Name, &bid.Description, &bid.Status, &bid.TenderId)
 		if err != nil {
-			log.Fatal(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		bids = append(bids, bid)

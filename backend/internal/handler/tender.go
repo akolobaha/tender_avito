@@ -185,10 +185,17 @@ func tendersMyHandler(w http.ResponseWriter, r *http.Request) {
 func tenderUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	tenderID := vars["tenderId"]
-
 	tenderIdUuid, err := uuid.Parse(tenderID)
+
+	username := r.URL.Query().Get("username")
+	if username == "" {
+		http.Error(w, "username is required", http.StatusBadRequest)
+		return
+	}
+
+	err = domain.IsUserResponsibleToTender(username, tenderIdUuid, w)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Не достаточно прав", http.StatusForbidden)
 		return
 	}
 
@@ -236,7 +243,13 @@ func tenderUpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	var newTenderResp domain.Tender
 
-	db.QueryRow("SELECT tender.id, name, description, service_type, status, ore.organization_id, e.username FROM tender JOIN organization_responsible ore ON ore.id = tender.organization_responsible_id JOIN employee e ON e.id = ore.user_id  WHERE tender.id = $1", tenderIdUuid).Scan(&newTenderResp.Id, &newTenderResp.Name, &newTenderResp.Description, &newTenderResp.ServiceType, &newTenderResp.Status, &newTenderResp.OrganizationId, &newTenderResp.CreatorUserName)
+	err = db.QueryRow(`SELECT tender.id, name, description, service_type, status, ore.organization_id, e.username 
+			FROM tender JOIN organization_responsible ore ON ore.id = tender.organization_responsible_id 
+			    		JOIN employee e ON e.id = ore.user_id  WHERE tender.id = $1`, tenderIdUuid).Scan(&newTenderResp.Id, &newTenderResp.Name, &newTenderResp.Description, &newTenderResp.ServiceType, &newTenderResp.Status, &newTenderResp.OrganizationId, &newTenderResp.CreatorUserName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
 
 	renderJSON(w, newTenderResp)
 }

@@ -2,6 +2,8 @@ package domain
 
 import (
 	"errors"
+	"github.com/google/uuid"
+	"net/http"
 	"tenders/db"
 )
 
@@ -29,4 +31,20 @@ func GetOrganizationResponsible(organizationId string, username string) (Organiz
 	}
 
 	return orgResponsible, nil
+}
+
+func IsUserResponsibleToTender(username string, tenderId uuid.UUID, w http.ResponseWriter) error {
+	db := db.GetConnection()
+	defer db.Close()
+
+	var result bool
+	db.QueryRow(`SELECT EXISTS(SELECT *
+              FROM organization_responsible
+              WHERE user_id = (select id from employee where username = $1)
+                AND id = (select organization_responsible_id from tender where id = $2))`, username, tenderId).Scan(&result)
+
+	if !result {
+		return errors.New("Не достаточно прав")
+	}
+	return nil
 }
