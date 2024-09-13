@@ -48,12 +48,29 @@ func bidsMyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	limit, offset := parseOffsetParams(w, r)
+
 	db := db.GetConnection()
 	defer db.Close()
 
 	var bids []domain.Bid
 
-	rows, err := db.Query("SELECT id, name, description, status, tender_id\nFROM bid\nWHERE organization_responsible_id IN (SELECT id FROM organization_responsible WHERE user_id IN (SELECT id FROM employee where username = $1));", username)
+	// Измененный SQL-запрос с LIMIT и OFFSET
+	query := `
+        SELECT id, name, description, status, tender_id
+        FROM bid
+        WHERE organization_responsible_id IN (
+            SELECT id 
+            FROM organization_responsible 
+            WHERE user_id IN (
+                SELECT id 
+                FROM employee 
+                WHERE username = $1
+            )
+        )
+        LIMIT $2 OFFSET $3;`
+
+	rows, err := db.Query(query, username, limit, offset)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -73,8 +90,6 @@ func bidsMyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	renderJSON(w, bids)
-
-	//fmt.Fprintf(w, "Username: %s", username)
 }
 
 func BidsEditHandler(w http.ResponseWriter, r *http.Request) {
