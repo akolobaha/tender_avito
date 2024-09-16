@@ -1,14 +1,15 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 	"tenders/internal/app"
 	"tenders/internal/config"
 )
 
+// Докер
 const envFilePath = "/usr/local/.env"
 
+// Локальный запуск
 //const envFilePath = "../.env"
 
 func main() {
@@ -16,7 +17,7 @@ func main() {
 	config.InitDbConnectionString(cfg)
 
 	if err != nil {
-		fmt.Println(err)
+		slog.Error(err.Error())
 		return
 	}
 
