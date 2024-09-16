@@ -3,6 +3,7 @@ package domain
 import (
 	"errors"
 	"github.com/google/uuid"
+	"strings"
 	"tenders/db"
 )
 
@@ -42,7 +43,24 @@ func IsUserResponsibleToTenderByUsername(username string, tenderId uuid.UUID) er
 	db.QueryRow(`SELECT EXISTS(SELECT *
               FROM organization_responsible
               WHERE user_id = (select id from employee where username = $1)
-                AND id = (select organization_responsible_id from tender where id = $2))`, username, tenderId).Scan(&result)
+                AND id = (select organization_responsible_id from tender where id = $2))`, strings.TrimSpace(username), tenderId).Scan(&result)
+
+	if !result {
+		return errors.New("Не достаточно прав")
+	}
+	return nil
+}
+
+func IsUserResponsibleToBidByUsername(username string, tenderId uuid.UUID) error {
+	db := db.GetConnection()
+	defer db.Close()
+
+	var result bool
+
+	db.QueryRow(`SELECT EXISTS(SELECT *
+              FROM organization_responsible
+              WHERE user_id = (select id from employee where username = $1)
+                AND id = (select organization_responsible_id from bid where id = $2))`, strings.TrimSpace(username), tenderId).Scan(&result)
 
 	if !result {
 		return errors.New("Не достаточно прав")

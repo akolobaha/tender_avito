@@ -31,7 +31,7 @@ func NewRouter(cfg *config.Config) {
 	// Предложения
 	r.HandleFunc("/api/bids/new", bidCreateHandler).Methods("POST")
 	r.HandleFunc("/api/bids/my", bidsMyHandler).Methods("GET")
-	r.HandleFunc("/api/bids/{bidId}/edit", BidsEditHandler).Methods("PATCH")
+	r.HandleFunc("/api/bids/{bidId}/edit", BidsEditHandler).Methods("PUT")
 
 	go func() {
 		for {

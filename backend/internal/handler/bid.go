@@ -2,9 +2,11 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"net/http"
+	"strconv"
+	"strings"
 	"tenders/db"
 	"tenders/internal/domain"
 )
@@ -88,7 +90,72 @@ func bidsMyHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func BidsEditHandler(w http.ResponseWriter, r *http.Request) {
+	username := r.URL.Query().Get("username")
+	if username == "" {
+		http.Error(w, "username is required", http.StatusBadRequest)
+		return
+	}
+
 	vars := mux.Vars(r)
-	userID := vars["bidId"]
-	fmt.Fprintf(w, "User ID: %s", userID)
+	bidID := vars["bidId"]
+	bidIdUuid, err := uuid.Parse(bidID)
+
+	if err != nil {
+		http.Error(w, "Не достаточно прав", http.StatusForbidden)
+		return
+	}
+
+	err = domain.IsUserResponsibleToBidByUsername(username, bidIdUuid)
+	if err != nil {
+		http.Error(w, "Не достаточно прав", http.StatusForbidden)
+		return
+	}
+
+	var newBidPatch domain.Bid
+	decoder := json.NewDecoder(r.Body)
+	err = decoder.Decode(&newBidPatch)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	db := db.GetConnection()
+	defer db.Close()
+
+	query := "UPDATE bid SET "
+	var args []interface{}
+	setClauses := []string{}
+
+	if newBidPatch.Name != "" {
+		setClauses = append(setClauses, "name = $"+strconv.Itoa(len(args)+1))
+		args = append(args, newBidPatch.Name)
+	}
+
+	if newBidPatch.Description != "" {
+		setClauses = append(setClauses, "description = $"+strconv.Itoa(len(args)+1))
+		args = append(args, newBidPatch.Description)
+	}
+
+	if len(setClauses) == 0 {
+		http.Error(w, "Нет данных для обновления", http.StatusBadRequest)
+		return
+	}
+
+	query += strings.Join(setClauses, ", ") + " WHERE id = $" + strconv.Itoa(len(args)+1)
+	args = append(args, bidIdUuid)
+
+	_, err = db.Exec(query, args...)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err = db.QueryRow(`SELECT id, description, status, tender_id, organization_responsible_id, name FROM bid WHERE id = $1`, bidIdUuid).
+		Scan(&newBidPatch.Id, &newBidPatch.Description, &newBidPatch.Status, &newBidPatch.TenderId, &newBidPatch.CreatorUsername, &newBidPatch.Name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	renderJSON(w, newBidPatch)
 }
